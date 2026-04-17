@@ -1,0 +1,467 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Check-In">
+<title>Seminar Check-In</title>
+
+<!-- Firebase SDK -->
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@600;700&display=swap" rel="stylesheet">
+
+<style>
+  :root {
+    --bg: #0c1220; --surface: #151e30; --border: #1e2d47;
+    --text: #e0e7f1; --text2: #7a8ba8;
+    --accent: #f97316; --accent-glow: #f9731644;
+    --green: #22c55e; --green-soft: #22c55e1a;
+    --red: #ef4444; --purple: #a78bfa;
+    --radius: 14px;
+    --safe-top: env(safe-area-inset-top, 20px);
+    --safe-bottom: env(safe-area-inset-bottom, 0px);
+  }
+  * { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+  body {
+    font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--text);
+    min-height: 100dvh; overflow-x: hidden;
+  }
+
+  /* ── Setup ── */
+  #setup-screen {
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    min-height: 100dvh; padding: 24px; text-align: center;
+  }
+  #setup-screen h1 { font-size: 20px; letter-spacing: 3px; margin-bottom: 8px; }
+  #setup-screen p { color: var(--text2); font-size: 13px; margin-bottom: 28px; max-width: 320px; line-height: 1.6; }
+  .setup-box {
+    width: 100%; max-width: 400px; background: var(--surface); border: 1px solid var(--border);
+    border-radius: var(--radius); padding: 20px; margin-bottom: 16px; text-align: left;
+  }
+  .setup-box label { font-size: 11px; font-weight: 700; letter-spacing: 1.5px; color: var(--text2); display: block; margin-bottom: 8px; }
+  .setup-box textarea, .setup-box input[type="text"] {
+    width: 100%; background: var(--bg); border: 1px solid var(--border); border-radius: 8px;
+    color: var(--text); font-family: 'JetBrains Mono', monospace; font-size: 12px; padding: 10px 12px; outline: none;
+  }
+  .setup-box textarea { resize: vertical; min-height: 100px; }
+  .setup-box textarea:focus, .setup-box input:focus { border-color: var(--accent); }
+  .setup-hint { font-size: 11px; color: var(--text2); margin-top: 6px; line-height: 1.5; }
+  .setup-error { color: var(--red); font-size: 12px; margin-top: 8px; }
+  .setup-status { color: var(--green); font-size: 12px; margin-top: 10px; font-weight: 600; }
+  .setup-actions { display: flex; gap: 10px; width: 100%; max-width: 400px; }
+  .setup-actions button {
+    flex: 1; padding: 14px; border-radius: 10px; border: none;
+    font-weight: 700; font-size: 13px; letter-spacing: 1.5px; cursor: pointer;
+  }
+  #btn-connect { background: var(--accent); color: #fff; box-shadow: 0 4px 20px var(--accent-glow); }
+  #btn-skip { background: var(--surface); color: var(--text2); border: 1px solid var(--border); }
+
+  /* ── App ── */
+  #app { display: none; flex-direction: column; min-height: 100dvh; }
+  #app.active { display: flex; }
+  .topbar {
+    padding: calc(var(--safe-top) + 8px) 20px 10px;
+    display: flex; align-items: center; gap: 10px;
+    background: var(--surface); border-bottom: 1px solid var(--border);
+  }
+  .topbar-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--accent); box-shadow: 0 0 10px var(--accent-glow); }
+  .topbar-title { font-size: 14px; font-weight: 700; letter-spacing: 2.5px; flex: 1; }
+  .topbar-stats { font-size: 12px; color: var(--text2); font-weight: 600; font-family: 'JetBrains Mono', monospace; }
+  .conn-dot { width: 6px; height: 6px; border-radius: 50%; }
+  .conn-dot.online { background: var(--green); box-shadow: 0 0 6px #22c55e88; }
+  .conn-dot.offline { background: var(--red); box-shadow: 0 0 6px #ef444488; }
+  .content { flex: 1; padding: 20px; overflow-y: auto; padding-bottom: calc(var(--safe-bottom) + 20px); }
+
+  /* ── Tabs ── */
+  .tabs {
+    display: flex; margin-bottom: 20px; background: var(--surface);
+    border-radius: 10px; overflow: hidden; border: 1px solid var(--border);
+  }
+  .tab {
+    flex: 1; padding: 11px; text-align: center; font-size: 11px; font-weight: 700;
+    letter-spacing: 1.5px; color: var(--text2); cursor: pointer; border: none; background: transparent;
+  }
+  .tab.active { background: var(--accent); color: #fff; }
+
+  /* ── Card ── */
+  .card {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: var(--radius); padding: 22px; margin-bottom: 16px;
+    animation: fadeUp 0.25s ease;
+  }
+  @keyframes fadeUp { from { opacity:0; transform:translateY(8px); } to { opacity:1; transform:translateY(0); } }
+  .card-label { font-size: 10px; font-weight: 700; letter-spacing: 2px; color: var(--text2); margin-bottom: 12px; }
+
+  .input-row { display: flex; gap: 10px; }
+  .phone-input {
+    flex: 1; background: var(--bg); border: 2px solid var(--border); border-radius: 10px;
+    padding: 14px; font-size: 28px; font-weight: 700; color: var(--text);
+    letter-spacing: 10px; text-align: center; font-family: 'JetBrains Mono', monospace; outline: none;
+  }
+  .phone-input:focus { border-color: var(--accent); }
+  .btn {
+    padding: 14px 22px; border-radius: 10px; border: none; font-weight: 700;
+    font-size: 13px; letter-spacing: 1.5px; cursor: pointer;
+  }
+  .btn-accent { background: var(--accent); color: #fff; box-shadow: 0 4px 16px var(--accent-glow); }
+  .btn-accent:disabled { background: #334155; color: #64748b; box-shadow: none; }
+  .btn-green { background: var(--green); color: #fff; box-shadow: 0 4px 16px #22c55e44; }
+  .btn-green:disabled { background: #334155; color: #64748b; box-shadow: none; }
+  .btn-ghost { background: transparent; border: 1px solid var(--border); color: var(--text2); }
+  .btn-red { background: var(--red); color: #fff; }
+  .btn-sm { padding: 10px 16px; font-size: 12px; }
+
+  .match-item {
+    display: flex; align-items: center; gap: 10px; width: 100%;
+    background: var(--bg); border: 1px solid var(--border); border-radius: 8px;
+    padding: 14px 16px; margin-top: 8px; cursor: pointer; color: var(--text); text-align: left; font-size: 14px;
+  }
+  .match-item:active { border-color: var(--accent); }
+  .match-name { font-weight: 700; flex: 1; }
+  .match-phone { color: var(--text2); font-size: 12px; font-family: 'JetBrains Mono', monospace; }
+
+  .badge { display: inline-block; padding: 3px 10px; border-radius: 20px; font-size: 10px; font-weight: 700; letter-spacing: 1px; }
+  .badge-green { background: var(--green-soft); color: var(--green); }
+  .badge-orange { background: #f9731622; color: #fb923c; }
+  .badge-edited { background: transparent; color: var(--accent); font-size: 11px; }
+
+  .info-grid { display: grid; grid-template-columns: 80px 1fr; gap: 14px; align-items: center; }
+  .info-label { font-size: 10px; font-weight: 700; letter-spacing: 1.5px; color: var(--text2); text-transform: uppercase; }
+  .info-value { font-size: 17px; font-weight: 700; }
+  .meeting-input {
+    width: 60px; background: var(--bg); border: 2px solid var(--border); border-radius: 8px;
+    padding: 6px 8px; font-size: 17px; font-weight: 700; color: var(--purple);
+    text-align: center; outline: none; font-family: 'JetBrains Mono', monospace;
+  }
+  .meeting-input:focus { border-color: var(--purple); }
+  .confirm-actions { display: flex; justify-content: space-between; margin-top: 24px; gap: 10px; }
+
+  .done-card { text-align: center; border-color: #22c55e44; }
+  .check-circle {
+    width: 56px; height: 56px; border-radius: 50%; background: var(--green); color: #fff;
+    font-size: 28px; font-weight: 700; display: flex; align-items: center; justify-content: center;
+    margin: 0 auto 14px; box-shadow: 0 0 24px #22c55e44;
+  }
+  .done-name { font-size: 22px; font-weight: 800; }
+  .done-msg { font-size: 13px; color: var(--green); margin-top: 4px; }
+  .no-match { margin-top: 14px; padding: 14px; background: #7f1d1d22; border: 1px solid #991b1b44; border-radius: 8px; color: #fca5a5; font-size: 13px; }
+
+  .reg-item { display: flex; align-items: center; gap: 10px; padding: 12px 14px; border-radius: 8px; margin-bottom: 4px; }
+  .reg-item.checked { background: var(--green-soft); }
+  .reg-dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
+  .reg-name { flex: 1; font-size: 14px; font-weight: 600; }
+  .reg-name.done { text-decoration: line-through; opacity: 0.5; }
+  .reg-phone { font-size: 11px; color: var(--text2); font-family: 'JetBrains Mono', monospace; }
+  .reg-meetings { font-size: 11px; color: var(--purple); font-weight: 700; margin-left: 6px; }
+  .progress-bar { height: 4px; background: var(--bg); border-radius: 2px; margin-top: 16px; overflow: hidden; }
+  .progress-fill { height: 100%; background: linear-gradient(90deg, var(--accent), var(--green)); border-radius: 2px; transition: width 0.4s ease; }
+
+  /* ── Manage ── */
+  .manage-section { margin-bottom: 20px; }
+  .manage-section h3 { font-size: 12px; font-weight: 700; letter-spacing: 1.5px; color: var(--text2); margin-bottom: 10px; }
+  .manage-textarea {
+    width: 100%; background: var(--bg); border: 1px solid var(--border); border-radius: 8px;
+    color: var(--text); font-family: 'JetBrains Mono', monospace; font-size: 12px;
+    padding: 12px; resize: vertical; min-height: 120px; outline: none; margin-bottom: 10px;
+  }
+  .manage-textarea:focus { border-color: var(--accent); }
+  .manage-msg { font-size: 12px; margin-top: 8px; font-weight: 600; }
+  .manage-msg.ok { color: var(--green); }
+  .manage-msg.err { color: var(--red); }
+  .manage-actions { display: flex; gap: 10px; flex-wrap: wrap; }
+  .danger-zone { margin-top: 24px; padding-top: 20px; border-top: 1px solid #991b1b44; }
+  .danger-zone h3 { color: var(--red); }
+</style>
+</head>
+<body>
+
+<!-- ═══════ APP ═══════ -->
+<div id="app">
+  <div class="topbar">
+    <div class="topbar-dot"></div>
+    <div class="topbar-title" id="app-title">CHECK-IN</div>
+    <div class="conn-dot" id="conn-dot"></div>
+    <div class="topbar-stats" id="stats">0/0</div>
+  </div>
+  <div class="content">
+    <div class="tabs">
+      <button class="tab active" id="tab-checkin" onclick="switchTab('checkin')">CHECK-IN</button>
+      <button class="tab" id="tab-list" onclick="switchTab('list')">LIST</button>
+      <button class="tab" id="tab-manage" onclick="switchTab('manage')">MANAGE</button>
+    </div>
+
+    <!-- Check-in -->
+    <div id="view-checkin">
+      <div id="phase-search" class="card">
+        <div class="card-label">LAST 3 DIGITS OF PHONE</div>
+        <div class="input-row">
+          <input class="phone-input" id="phone-input" type="tel" maxlength="3" placeholder="678" inputmode="numeric">
+          <button class="btn btn-accent" id="btn-check" onclick="doSearch()" disabled>CHECK</button>
+        </div>
+        <div id="search-results"></div>
+      </div>
+      <div id="phase-confirm" class="card" style="display:none;border-color:#22c55e44;">
+        <div class="card-label" style="color:var(--green);">CONFIRM INFORMATION</div>
+        <div class="info-grid">
+          <div class="info-label">Name</div><div class="info-value" id="conf-name"></div>
+          <div class="info-label">Phone</div><div class="info-value" id="conf-phone"></div>
+          <div class="info-label">Meetings</div>
+          <div class="info-value">
+            <input class="meeting-input" id="conf-meetings" type="number" min="1">
+            <span class="badge-edited" id="conf-edited" style="display:none;">edited</span>
+          </div>
+          <div class="info-label">Status</div><div class="info-value" id="conf-status"></div>
+        </div>
+        <div class="confirm-actions">
+          <button class="btn btn-ghost" onclick="resetSearch()">← Wrong</button>
+          <button class="btn btn-green" id="btn-register" onclick="doRegister()">✓ REGISTER</button>
+        </div>
+      </div>
+      <div id="phase-done" class="card done-card" style="display:none;">
+        <div class="check-circle">✓</div>
+        <div class="done-name" id="done-name"></div>
+        <div class="done-msg">Successfully checked in!</div>
+        <button class="btn btn-accent" style="margin-top:20px;width:100%;" onclick="resetSearch()">NEXT PERSON →</button>
+      </div>
+    </div>
+
+    <!-- List -->
+    <div id="view-list" style="display:none;">
+      <div id="reg-list"></div>
+      <div class="progress-bar"><div class="progress-fill" id="progress-fill"></div></div>
+    </div>
+
+    <!-- Manage -->
+    <div id="view-manage" style="display:none;">
+      <div class="card">
+        <div class="manage-section">
+          <h3>UPLOAD REGISTRANTS (CSV)</h3>
+          <textarea class="manage-textarea" id="manage-csv" placeholder="name,phone,meetings
+王小明,0912-345-678,3
+李美玲,0923-456-789,1
+張大偉,0934-567-890,2"></textarea>
+          <div class="setup-hint" style="margin-bottom:12px;">Format: name,phone,meetings — one per line. First line can be a header.</div>
+          <button class="btn btn-accent btn-sm" onclick="uploadCSV()">UPLOAD TO FIREBASE</button>
+          <div id="upload-msg" class="manage-msg"></div>
+        </div>
+        <div class="manage-section" style="margin-top:20px;">
+          <h3>CURRENT DATA</h3>
+          <div id="manage-stats" style="font-size:13px;color:var(--text2);line-height:1.8;"></div>
+        </div>
+        <div class="danger-zone">
+          <h3>DANGER ZONE</h3>
+          <div class="manage-actions" style="margin-top:10px;">
+            <button class="btn btn-ghost btn-sm" onclick="resetAllCheckins()">RESET CHECK-INS</button>
+            <button class="btn btn-red btn-sm" onclick="deleteAllData()">DELETE ALL DATA</button>
+          </div>
+          <div id="danger-msg" class="manage-msg"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+let db = null, registrants = [], selectedId = null, originalMeetings = 0, isDemo = false;
+const COLLECTION = 'registrants';
+const last3 = ph => ph.replace(/\D/g,'').slice(-3);
+const $ = id => document.getElementById(id);
+
+// ── Hardcoded Firebase Config ──
+const FIREBASE_CONFIG = {
+  apiKey: "AIzaSyDKLf-F9hfMf2Vrc22McKd8wirNHmB6Pcg",
+  authDomain: "ckchparkcheckin.firebaseapp.com",
+  projectId: "ckchparkcheckin",
+  storageBucket: "ckchparkcheckin.firebasestorage.app",
+  messagingSenderId: "361774781563",
+  appId: "1:361774781563:web:d9774b03c3467f1b8cbede"
+};
+
+// ── Auto-connect on load ──
+(function() {
+  try {
+    firebase.initializeApp(FIREBASE_CONFIG);
+    db = firebase.firestore();
+    db.enablePersistence().catch(()=>{});
+    launchApp('CHECK-IN');
+  } catch(e) {
+    document.body.innerHTML = '<div style="padding:40px;color:#fca5a5;font-family:sans-serif;">Firebase connection failed: '+e.message+'</div>';
+  }
+})();
+
+// ── Launch ──
+function launchApp(title) {
+  $('app').classList.add('active');
+  $('app-title').textContent = title || 'CHECK-IN';
+  if (db) {
+    db.collection(COLLECTION).onSnapshot(snap => {
+      registrants = snap.docs.map(d => ({id:d.id, ...d.data()}));
+      updateUI();
+    });
+    setInterval(() => { $('conn-dot').className = navigator.onLine ? 'conn-dot online' : 'conn-dot offline'; }, 2000);
+    $('conn-dot').className = 'conn-dot online';
+  } else {
+    $('conn-dot').className = 'conn-dot offline';
+    updateUI();
+  }
+  $('phone-input').focus();
+  $('phone-input').addEventListener('input', e => {
+    e.target.value = e.target.value.replace(/\D/g,'');
+    $('btn-check').disabled = e.target.value.length !== 3;
+  });
+  $('phone-input').addEventListener('keydown', e => { if (e.key==='Enter') doSearch(); });
+}
+
+// ── Tabs ──
+function switchTab(t) {
+  ['checkin','list','manage'].forEach(x => {
+    $('tab-'+x).className = x===t ? 'tab active' : 'tab';
+    $('view-'+x).style.display = x===t ? 'block' : 'none';
+  });
+  if (t==='list') renderList();
+  if (t==='manage') updateManageStats();
+}
+
+// ── Search ──
+function doSearch() {
+  const val = $('phone-input').value;
+  if (val.length!==3) return;
+  const found = registrants.filter(r => last3(r.phone)===val);
+  const el = $('search-results');
+  if (found.length===0) {
+    el.innerHTML = `<div class="no-match">✕ No registrant found ending in <strong>${val}</strong></div>`;
+  } else if (found.length===1) {
+    el.innerHTML = ''; showConfirm(found[0]);
+  } else {
+    el.innerHTML = '<div style="margin-top:12px;font-size:13px;color:var(--text2);">Multiple found — select one:</div>';
+    found.forEach(r => {
+      const btn = document.createElement('button');
+      btn.className = 'match-item';
+      btn.innerHTML = `<span class="match-name">${r.name}</span><span class="match-phone">${r.phone}</span>${r.checked?'<span class="badge badge-green">CHECKED</span>':''}`;
+      btn.onclick = () => showConfirm(r);
+      el.appendChild(btn);
+    });
+  }
+}
+
+function showConfirm(r) {
+  selectedId = r.id; originalMeetings = r.meetings;
+  $('phase-search').style.display = 'none';
+  $('phase-confirm').style.display = 'block';
+  $('phase-done').style.display = 'none';
+  $('conf-name').textContent = r.name;
+  $('conf-phone').textContent = r.phone;
+  $('conf-meetings').value = r.meetings;
+  $('conf-edited').style.display = 'none';
+  if (r.checked) {
+    $('conf-status').innerHTML = '<span class="badge badge-green">ALREADY CHECKED IN</span>';
+    $('btn-register').disabled = true; $('btn-register').textContent = 'ALREADY DONE';
+  } else {
+    $('conf-status').innerHTML = '<span class="badge badge-orange">NOT YET</span>';
+    $('btn-register').disabled = false; $('btn-register').textContent = '✓ REGISTER';
+  }
+  $('conf-meetings').oninput = () => {
+    $('conf-edited').style.display = (parseInt($('conf-meetings').value)!==originalMeetings) ? 'inline' : 'none';
+  };
+}
+
+async function doRegister() {
+  if (!selectedId) return;
+  const nm = Math.max(1, parseInt($('conf-meetings').value)||1);
+  const r = registrants.find(x => x.id===selectedId);
+  await db.collection(COLLECTION).doc(selectedId).update({checked:true, meetings:nm});
+  $('phase-confirm').style.display = 'none';
+  $('phase-done').style.display = 'block';
+  $('done-name').textContent = r ? r.name : '';
+}
+
+function resetSearch() {
+  selectedId = null;
+  $('phone-input').value = ''; $('btn-check').disabled = true;
+  $('search-results').innerHTML = '';
+  $('phase-search').style.display = 'block';
+  $('phase-confirm').style.display = 'none';
+  $('phase-done').style.display = 'none';
+  $('phone-input').focus();
+}
+
+// ── Manage: Upload CSV ──
+async function uploadCSV() {
+  const msg = $('upload-msg'); msg.textContent = ''; msg.className = 'manage-msg';
+  const raw = $('manage-csv').value.trim();
+  if (!raw) { msg.textContent = 'Paste CSV data first.'; msg.className = 'manage-msg err'; return; }
+  const lines = raw.split('\n').map(l=>l.trim()).filter(Boolean);
+  const start = (lines[0].toLowerCase().includes('name')||lines[0].toLowerCase().includes('phone')) ? 1 : 0;
+  let count = 0;
+  // Firestore batch limit is 500, handle in chunks
+  let ops = [];
+  for (let i=start; i<lines.length; i++) {
+    const p = lines[i].split(',').map(s=>s.trim());
+    if (p.length>=3) { ops.push({name:p[0], phone:p[1], meetings:parseInt(p[2])||1, checked:false}); count++; }
+  }
+  if (!count) { msg.textContent = 'No valid rows found.'; msg.className = 'manage-msg err'; return; }
+  try {
+    for (let i=0; i<ops.length; i+=400) {
+      const batch = db.batch();
+      ops.slice(i, i+400).forEach(o => { batch.set(db.collection(COLLECTION).doc(), o); });
+      await batch.commit();
+    }
+    msg.textContent = `✓ Uploaded ${count} registrants!`; msg.className = 'manage-msg ok';
+    $('manage-csv').value = '';
+  } catch(e) { msg.textContent = 'Upload failed: '+e.message; msg.className = 'manage-msg err'; }
+}
+
+async function resetAllCheckins() {
+  const msg = $('danger-msg');
+  if (!confirm('Reset all check-in statuses?')) return;
+  for (let i=0; i<registrants.length; i+=400) {
+    const batch = db.batch();
+    registrants.slice(i,i+400).forEach(r => batch.update(db.collection(COLLECTION).doc(r.id),{checked:false}));
+    await batch.commit();
+  }
+  msg.textContent = '✓ All check-ins reset.'; msg.className = 'manage-msg ok';
+}
+
+async function deleteAllData() {
+  const msg = $('danger-msg');
+  if (!confirm('DELETE all registrant data? Cannot undo.')) return;
+  for (let i=0; i<registrants.length; i+=400) {
+    const batch = db.batch();
+    registrants.slice(i,i+400).forEach(r => batch.delete(db.collection(COLLECTION).doc(r.id)));
+    await batch.commit();
+  }
+  msg.textContent = '✓ All data deleted.'; msg.className = 'manage-msg ok';
+}
+
+// ── UI ──
+function updateUI() {
+  const t = registrants.length, c = registrants.filter(r=>r.checked).length;
+  $('stats').textContent = `${c}/${t}`;
+  renderList(); updateManageStats();
+}
+function renderList() {
+  const el=$('reg-list'); if(!el) return;
+  const t=registrants.length, c=registrants.filter(r=>r.checked).length;
+  el.innerHTML = registrants.map(r=>`
+    <div class="reg-item ${r.checked?'checked':''}">
+      <div class="reg-dot" style="background:${r.checked?'var(--green)':'var(--text2)'}"></div>
+      <div class="reg-name ${r.checked?'done':''}">${r.name}</div>
+      <span class="reg-meetings">×${r.meetings}</span>
+      <span class="reg-phone">${last3(r.phone)}</span>
+    </div>`).join('');
+  $('progress-fill').style.width = (t?(c/t)*100:0)+'%';
+}
+function updateManageStats() {
+  const el=$('manage-stats'); if(!el) return;
+  const t=registrants.length, c=registrants.filter(r=>r.checked).length;
+  el.innerHTML = t===0 ? 'No registrants yet. Upload CSV data above to get started.'
+    : `Total: <strong>${t}</strong> · Checked in: <strong>${c}</strong> · Remaining: <strong>${t-c}</strong>`;
+}
+</script>
+</body>
+</html>

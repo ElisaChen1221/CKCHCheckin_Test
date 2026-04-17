@@ -1,0 +1,720 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Check-In">
+<title>Seminar Check-In</title>
+
+<!-- Firebase SDK -->
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@600;700&display=swap" rel="stylesheet">
+
+<style>
+  :root {
+    --bg: #0c1220;
+    --surface: #151e30;
+    --border: #1e2d47;
+    --text: #e0e7f1;
+    --text2: #7a8ba8;
+    --accent: #f97316;
+    --accent-glow: #f9731644;
+    --green: #22c55e;
+    --green-soft: #22c55e1a;
+    --red: #ef4444;
+    --purple: #a78bfa;
+    --purple-soft: #a78bfa22;
+    --radius: 14px;
+    --safe-top: env(safe-area-inset-top, 20px);
+    --safe-bottom: env(safe-area-inset-bottom, 0px);
+  }
+
+  * { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+
+  body {
+    font-family: 'DM Sans', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    min-height: 100dvh;
+    overflow-x: hidden;
+  }
+
+  /* ── Setup Screen ── */
+  #setup-screen {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 100dvh;
+    padding: 24px;
+    text-align: center;
+  }
+  #setup-screen h1 {
+    font-size: 20px;
+    letter-spacing: 3px;
+    margin-bottom: 8px;
+  }
+  #setup-screen p {
+    color: var(--text2);
+    font-size: 13px;
+    margin-bottom: 28px;
+    max-width: 320px;
+    line-height: 1.6;
+  }
+  .setup-box {
+    width: 100%;
+    max-width: 400px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 20px;
+    margin-bottom: 16px;
+    text-align: left;
+  }
+  .setup-box label {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 1.5px;
+    color: var(--text2);
+    display: block;
+    margin-bottom: 8px;
+  }
+  .setup-box textarea {
+    width: 100%;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    color: var(--text);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    padding: 12px;
+    resize: vertical;
+    min-height: 100px;
+    outline: none;
+  }
+  .setup-box textarea:focus { border-color: var(--accent); }
+  .setup-box input[type="text"] {
+    width: 100%;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    color: var(--text);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    padding: 10px 12px;
+    outline: none;
+  }
+  .setup-box input[type="text"]:focus { border-color: var(--accent); }
+  .setup-hint {
+    font-size: 11px;
+    color: var(--text2);
+    margin-top: 6px;
+    line-height: 1.5;
+  }
+  .setup-actions {
+    display: flex;
+    gap: 10px;
+    width: 100%;
+    max-width: 400px;
+  }
+  .setup-actions button {
+    flex: 1;
+    padding: 14px;
+    border-radius: 10px;
+    border: none;
+    font-weight: 700;
+    font-size: 13px;
+    letter-spacing: 1.5px;
+    cursor: pointer;
+  }
+  #btn-upload {
+    background: var(--accent);
+    color: #fff;
+    box-shadow: 0 4px 20px var(--accent-glow);
+  }
+  #btn-skip {
+    background: var(--surface);
+    color: var(--text2);
+    border: 1px solid var(--border);
+  }
+  .setup-error {
+    color: var(--red);
+    font-size: 12px;
+    margin-top: 8px;
+  }
+  .setup-status {
+    color: var(--green);
+    font-size: 12px;
+    margin-top: 10px;
+    font-weight: 600;
+  }
+
+  /* ── App Shell ── */
+  #app { display: none; flex-direction: column; min-height: 100dvh; }
+  #app.active { display: flex; }
+
+  .topbar {
+    padding: calc(var(--safe-top) + 8px) 20px 10px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+  }
+  .topbar-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--accent); box-shadow: 0 0 10px var(--accent-glow); }
+  .topbar-title { font-size: 14px; font-weight: 700; letter-spacing: 2.5px; flex: 1; }
+  .topbar-stats {
+    font-size: 12px;
+    color: var(--text2);
+    font-weight: 600;
+    font-family: 'JetBrains Mono', monospace;
+  }
+
+  .content { flex: 1; padding: 20px; overflow-y: auto; padding-bottom: calc(var(--safe-bottom) + 20px); }
+
+  /* ── Tabs ── */
+  .tabs {
+    display: flex;
+    gap: 0;
+    margin-bottom: 20px;
+    background: var(--surface);
+    border-radius: 10px;
+    overflow: hidden;
+    border: 1px solid var(--border);
+  }
+  .tab {
+    flex: 1;
+    padding: 11px;
+    text-align: center;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 1.5px;
+    color: var(--text2);
+    cursor: pointer;
+    transition: all 0.15s;
+    border: none;
+    background: transparent;
+  }
+  .tab.active { background: var(--accent); color: #fff; }
+
+  /* ── Search Card ── */
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 22px;
+    margin-bottom: 16px;
+    animation: fadeUp 0.25s ease;
+  }
+  @keyframes fadeUp { from { opacity:0; transform:translateY(8px); } to { opacity:1; transform:translateY(0); } }
+
+  .card-label {
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 2px;
+    color: var(--text2);
+    margin-bottom: 12px;
+  }
+  .input-row { display: flex; gap: 10px; }
+  .phone-input {
+    flex: 1;
+    background: var(--bg);
+    border: 2px solid var(--border);
+    border-radius: 10px;
+    padding: 14px;
+    font-size: 28px;
+    font-weight: 700;
+    color: var(--text);
+    letter-spacing: 10px;
+    text-align: center;
+    font-family: 'JetBrains Mono', monospace;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+  .phone-input:focus { border-color: var(--accent); }
+  .btn {
+    padding: 14px 22px;
+    border-radius: 10px;
+    border: none;
+    font-weight: 700;
+    font-size: 13px;
+    letter-spacing: 1.5px;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .btn-accent { background: var(--accent); color: #fff; box-shadow: 0 4px 16px var(--accent-glow); }
+  .btn-accent:disabled { background: #334155; color: #64748b; box-shadow: none; }
+  .btn-green { background: var(--green); color: #fff; box-shadow: 0 4px 16px #22c55e44; }
+  .btn-green:disabled { background: #334155; color: #64748b; box-shadow: none; }
+  .btn-ghost { background: transparent; border: 1px solid var(--border); color: var(--text2); }
+
+  /* ── Match list ── */
+  .match-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    width: 100%;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 14px 16px;
+    margin-top: 8px;
+    cursor: pointer;
+    color: var(--text);
+    text-align: left;
+    font-size: 14px;
+    transition: border-color 0.15s;
+  }
+  .match-item:active { border-color: var(--accent); }
+  .match-name { font-weight: 700; flex: 1; }
+  .match-phone { color: var(--text2); font-size: 12px; font-family: 'JetBrains Mono', monospace; }
+
+  /* ── Badges ── */
+  .badge {
+    display: inline-block;
+    padding: 3px 10px;
+    border-radius: 20px;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 1px;
+  }
+  .badge-green { background: var(--green-soft); color: var(--green); }
+  .badge-orange { background: #f9731622; color: #fb923c; }
+  .badge-edited { background: transparent; color: var(--accent); font-size: 11px; }
+
+  /* ── Confirm ── */
+  .info-grid {
+    display: grid;
+    grid-template-columns: 80px 1fr;
+    gap: 14px 14px;
+    align-items: center;
+  }
+  .info-label { font-size: 10px; font-weight: 700; letter-spacing: 1.5px; color: var(--text2); text-transform: uppercase; }
+  .info-value { font-size: 17px; font-weight: 700; }
+  .meeting-input {
+    width: 60px;
+    background: var(--bg);
+    border: 2px solid var(--border);
+    border-radius: 8px;
+    padding: 6px 8px;
+    font-size: 17px;
+    font-weight: 700;
+    color: var(--purple);
+    text-align: center;
+    outline: none;
+    font-family: 'JetBrains Mono', monospace;
+  }
+  .meeting-input:focus { border-color: var(--purple); }
+  .confirm-actions { display: flex; justify-content: space-between; margin-top: 24px; gap: 10px; }
+
+  /* ── Done ── */
+  .done-card { text-align: center; border-color: #22c55e44; }
+  .check-circle {
+    width: 56px; height: 56px; border-radius: 50%;
+    background: var(--green); color: #fff;
+    font-size: 28px; font-weight: 700;
+    display: flex; align-items: center; justify-content: center;
+    margin: 0 auto 14px;
+    box-shadow: 0 0 24px #22c55e44;
+  }
+  .done-name { font-size: 22px; font-weight: 800; }
+  .done-msg { font-size: 13px; color: var(--green); margin-top: 4px; }
+
+  /* ── No match ── */
+  .no-match {
+    margin-top: 14px;
+    padding: 14px;
+    background: #7f1d1d22;
+    border: 1px solid #991b1b44;
+    border-radius: 8px;
+    color: #fca5a5;
+    font-size: 13px;
+  }
+
+  /* ── Registrant list ── */
+  .reg-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 12px 14px;
+    border-radius: 8px;
+    margin-bottom: 4px;
+    transition: background 0.15s;
+  }
+  .reg-item.checked { background: var(--green-soft); }
+  .reg-dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
+  .reg-name { flex: 1; font-size: 14px; font-weight: 600; }
+  .reg-name.done { text-decoration: line-through; opacity: 0.5; }
+  .reg-phone { font-size: 11px; color: var(--text2); font-family: 'JetBrains Mono', monospace; }
+  .reg-meetings { font-size: 11px; color: var(--purple); font-weight: 700; margin-left: 6px; }
+
+  /* ── Progress ── */
+  .progress-bar { height: 4px; background: var(--bg); border-radius: 2px; margin-top: 16px; overflow: hidden; }
+  .progress-fill { height: 100%; background: linear-gradient(90deg, var(--accent), var(--green)); border-radius: 2px; transition: width 0.4s ease; }
+
+  /* ── Connection status ── */
+  .conn-dot { width: 6px; height: 6px; border-radius: 50%; }
+  .conn-dot.online { background: var(--green); box-shadow: 0 0 6px #22c55e88; }
+  .conn-dot.offline { background: var(--red); box-shadow: 0 0 6px #ef444488; }
+</style>
+</head>
+<body>
+
+<!-- ═══════ SETUP SCREEN ═══════ -->
+<div id="setup-screen">
+  <h1>SEMINAR CHECK-IN</h1>
+  <p>Paste your Firebase config and registrant data to get started.</p>
+
+  <div class="setup-box">
+    <label>FIREBASE CONFIG (JSON)</label>
+    <textarea id="firebase-config" placeholder='{
+  "apiKey": "...",
+  "authDomain": "...",
+  "projectId": "...",
+  "storageBucket": "...",
+  "messagingSenderId": "...",
+  "appId": "..."
+}'></textarea>
+    <div class="setup-hint">Go to Firebase Console → Project Settings → Your apps → Config</div>
+    <div id="firebase-error" class="setup-error"></div>
+  </div>
+
+  <div class="setup-box">
+    <label>REGISTRANT DATA (CSV)</label>
+    <textarea id="csv-data" placeholder="name,phone,meetings
+王小明,0912-345-678,3
+李美玲,0923-456-789,1"></textarea>
+    <div class="setup-hint">Format: name,phone,meetings (one per line). First line is header.</div>
+  </div>
+
+  <div class="setup-box">
+    <label>SEMINAR NAME (OPTIONAL)</label>
+    <input type="text" id="seminar-name" placeholder="e.g. 2026 AI Summit">
+  </div>
+
+  <div class="setup-actions">
+    <button id="btn-skip" onclick="skipSetup()">SKIP (DEMO)</button>
+    <button id="btn-upload" onclick="startSetup()">CONNECT & UPLOAD</button>
+  </div>
+  <div id="setup-status" class="setup-status"></div>
+</div>
+
+<!-- ═══════ MAIN APP ═══════ -->
+<div id="app">
+  <div class="topbar">
+    <div class="topbar-dot"></div>
+    <div class="topbar-title" id="app-title">CHECK-IN</div>
+    <div class="conn-dot" id="conn-dot"></div>
+    <div class="topbar-stats" id="stats">0/0</div>
+  </div>
+
+  <div class="content">
+    <div class="tabs">
+      <button class="tab active" id="tab-checkin" onclick="switchTab('checkin')">CHECK-IN</button>
+      <button class="tab" id="tab-list" onclick="switchTab('list')">LIST</button>
+    </div>
+
+    <!-- Check-in Tab -->
+    <div id="view-checkin">
+      <!-- Search -->
+      <div id="phase-search" class="card">
+        <div class="card-label">LAST 3 DIGITS OF PHONE</div>
+        <div class="input-row">
+          <input class="phone-input" id="phone-input" type="tel" maxlength="3" placeholder="678" inputmode="numeric">
+          <button class="btn btn-accent" id="btn-check" onclick="doSearch()" disabled>CHECK</button>
+        </div>
+        <div id="search-results"></div>
+      </div>
+
+      <!-- Confirm -->
+      <div id="phase-confirm" class="card" style="display:none; border-color:#22c55e44;">
+        <div class="card-label" style="color:var(--green);">CONFIRM INFORMATION</div>
+        <div class="info-grid">
+          <div class="info-label">Name</div>
+          <div class="info-value" id="conf-name"></div>
+          <div class="info-label">Phone</div>
+          <div class="info-value" id="conf-phone"></div>
+          <div class="info-label">Meetings</div>
+          <div class="info-value" id="conf-meetings-wrap">
+            <input class="meeting-input" id="conf-meetings" type="number" min="1">
+            <span class="badge-edited" id="conf-edited" style="display:none;">edited</span>
+          </div>
+          <div class="info-label">Status</div>
+          <div class="info-value" id="conf-status"></div>
+        </div>
+        <div class="confirm-actions">
+          <button class="btn btn-ghost" onclick="resetSearch()">← Wrong</button>
+          <button class="btn btn-green" id="btn-register" onclick="doRegister()">✓ REGISTER</button>
+        </div>
+      </div>
+
+      <!-- Done -->
+      <div id="phase-done" class="card done-card" style="display:none;">
+        <div class="check-circle">✓</div>
+        <div class="done-name" id="done-name"></div>
+        <div class="done-msg">Successfully checked in!</div>
+        <button class="btn btn-accent" style="margin-top:20px; width:100%;" onclick="resetSearch()">NEXT PERSON →</button>
+      </div>
+    </div>
+
+    <!-- List Tab -->
+    <div id="view-list" style="display:none;">
+      <div id="reg-list"></div>
+      <div class="progress-bar"><div class="progress-fill" id="progress-fill"></div></div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ── State ──
+let db = null;
+let registrants = [];
+let selectedId = null;
+let originalMeetings = 0;
+let unsubscribe = null;
+let isDemo = false;
+const COLLECTION = 'registrants';
+
+// ── Sample Data ──
+const SAMPLE = [
+  { name:'王小明', phone:'0912-345-678', meetings:3, checked:false },
+  { name:'李美玲', phone:'0923-456-789', meetings:1, checked:false },
+  { name:'張大偉', phone:'0934-567-890', meetings:2, checked:false },
+  { name:'陳雅婷', phone:'0945-678-901', meetings:4, checked:false },
+  { name:'林志豪', phone:'0956-789-012', meetings:1, checked:false },
+  { name:'黃淑芬', phone:'0967-890-123', meetings:2, checked:false },
+  { name:'吳建宏', phone:'0978-901-234', meetings:3, checked:false },
+  { name:'周佳琪', phone:'0912-111-678', meetings:1, checked:false },
+];
+
+// ── Helpers ──
+const last3 = (ph) => ph.replace(/\D/g, '').slice(-3);
+const $ = (id) => document.getElementById(id);
+
+// ── Setup ──
+async function startSetup() {
+  const errEl = $('firebase-error');
+  const statusEl = $('setup-status');
+  errEl.textContent = '';
+  statusEl.textContent = '';
+
+  // Parse Firebase config
+  let config;
+  try {
+    config = JSON.parse($('firebase-config').value.trim());
+    if (!config.projectId) throw new Error();
+  } catch {
+    errEl.textContent = 'Invalid Firebase config JSON.';
+    return;
+  }
+
+  // Init Firebase
+  try {
+    firebase.initializeApp(config);
+    db = firebase.firestore();
+    db.enablePersistence().catch(() => {});
+    statusEl.textContent = 'Connected to Firebase!';
+  } catch (e) {
+    errEl.textContent = 'Firebase init failed: ' + e.message;
+    return;
+  }
+
+  // Parse CSV and upload
+  const csvRaw = $('csv-data').value.trim();
+  if (csvRaw) {
+    const lines = csvRaw.split('\n').map(l => l.trim()).filter(Boolean);
+    const start = (lines[0].toLowerCase().includes('name') || lines[0].toLowerCase().includes('phone')) ? 1 : 0;
+    const batch = db.batch();
+    for (let i = start; i < lines.length; i++) {
+      const parts = lines[i].split(',').map(s => s.trim());
+      if (parts.length >= 3) {
+        const ref = db.collection(COLLECTION).doc();
+        batch.set(ref, {
+          name: parts[0],
+          phone: parts[1],
+          meetings: parseInt(parts[2]) || 1,
+          checked: false,
+        });
+      }
+    }
+    await batch.commit();
+    statusEl.textContent = `Uploaded ${lines.length - start} registrants!`;
+  }
+
+  const semName = $('seminar-name').value.trim();
+  setTimeout(() => launchApp(semName), 600);
+}
+
+function skipSetup() {
+  isDemo = true;
+  registrants = SAMPLE.map((r, i) => ({ ...r, id: 'demo-' + i }));
+  launchApp('DEMO SEMINAR');
+}
+
+// ── Launch ──
+function launchApp(title) {
+  $('setup-screen').style.display = 'none';
+  $('app').classList.add('active');
+  $('app-title').textContent = title || 'CHECK-IN';
+
+  if (!isDemo && db) {
+    // Real-time listener
+    unsubscribe = db.collection(COLLECTION).onSnapshot((snap) => {
+      registrants = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      updateUI();
+    });
+    // Connection status
+    setInterval(() => {
+      $('conn-dot').className = navigator.onLine ? 'conn-dot online' : 'conn-dot offline';
+    }, 2000);
+    $('conn-dot').className = 'conn-dot online';
+  } else {
+    $('conn-dot').className = 'conn-dot offline';
+    updateUI();
+  }
+
+  $('phone-input').focus();
+  $('phone-input').addEventListener('input', (e) => {
+    e.target.value = e.target.value.replace(/\D/g, '');
+    $('btn-check').disabled = e.target.value.length !== 3;
+  });
+  $('phone-input').addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') doSearch();
+  });
+}
+
+// ── Tab switching ──
+function switchTab(tab) {
+  $('tab-checkin').className = tab === 'checkin' ? 'tab active' : 'tab';
+  $('tab-list').className = tab === 'list' ? 'tab active' : 'tab';
+  $('view-checkin').style.display = tab === 'checkin' ? 'block' : 'none';
+  $('view-list').style.display = tab === 'list' ? 'block' : 'none';
+  if (tab === 'list') renderList();
+}
+
+// ── Search ──
+function doSearch() {
+  const val = $('phone-input').value;
+  if (val.length !== 3) return;
+  const found = registrants.filter(r => last3(r.phone) === val);
+  const resultsEl = $('search-results');
+
+  if (found.length === 0) {
+    resultsEl.innerHTML = `<div class="no-match">✕ No registrant found ending in <strong>${val}</strong></div>`;
+  } else if (found.length === 1) {
+    resultsEl.innerHTML = '';
+    showConfirm(found[0]);
+  } else {
+    resultsEl.innerHTML = '<div style="margin-top:12px;font-size:13px;color:var(--text2);">Multiple found — select one:</div>';
+    found.forEach(r => {
+      const btn = document.createElement('button');
+      btn.className = 'match-item';
+      btn.innerHTML = `
+        <span class="match-name">${r.name}</span>
+        <span class="match-phone">${r.phone}</span>
+        ${r.checked ? '<span class="badge badge-green">CHECKED</span>' : ''}
+      `;
+      btn.onclick = () => showConfirm(r);
+      resultsEl.appendChild(btn);
+    });
+  }
+}
+
+// ── Confirm ──
+function showConfirm(r) {
+  selectedId = r.id;
+  originalMeetings = r.meetings;
+  $('phase-search').style.display = 'none';
+  $('phase-confirm').style.display = 'block';
+  $('phase-done').style.display = 'none';
+
+  $('conf-name').textContent = r.name;
+  $('conf-phone').textContent = r.phone;
+  $('conf-meetings').value = r.meetings;
+  $('conf-edited').style.display = 'none';
+
+  if (r.checked) {
+    $('conf-status').innerHTML = '<span class="badge badge-green">ALREADY CHECKED IN</span>';
+    $('btn-register').disabled = true;
+    $('btn-register').textContent = 'ALREADY DONE';
+  } else {
+    $('conf-status').innerHTML = '<span class="badge badge-orange">NOT YET</span>';
+    $('btn-register').disabled = false;
+    $('btn-register').textContent = '✓ REGISTER';
+  }
+
+  $('conf-meetings').oninput = () => {
+    const v = parseInt($('conf-meetings').value);
+    $('conf-edited').style.display = (v !== originalMeetings) ? 'inline' : 'none';
+  };
+}
+
+// ── Register ──
+async function doRegister() {
+  if (!selectedId) return;
+  const newMeetings = Math.max(1, parseInt($('conf-meetings').value) || 1);
+  const r = registrants.find(r => r.id === selectedId);
+
+  if (isDemo) {
+    r.checked = true;
+    r.meetings = newMeetings;
+    updateUI();
+  } else {
+    await db.collection(COLLECTION).doc(selectedId).update({
+      checked: true,
+      meetings: newMeetings,
+    });
+  }
+
+  $('phase-confirm').style.display = 'none';
+  $('phase-done').style.display = 'block';
+  $('done-name').textContent = r ? r.name : '';
+}
+
+// ── Reset ──
+function resetSearch() {
+  selectedId = null;
+  $('phone-input').value = '';
+  $('btn-check').disabled = true;
+  $('search-results').innerHTML = '';
+  $('phase-search').style.display = 'block';
+  $('phase-confirm').style.display = 'none';
+  $('phase-done').style.display = 'none';
+  $('phone-input').focus();
+}
+
+// ── Update UI ──
+function updateUI() {
+  const total = registrants.length;
+  const checked = registrants.filter(r => r.checked).length;
+  $('stats').textContent = `${checked}/${total}`;
+  renderList();
+}
+
+function renderList() {
+  const listEl = $('reg-list');
+  if (!listEl) return;
+  const total = registrants.length;
+  const checked = registrants.filter(r => r.checked).length;
+
+  listEl.innerHTML = registrants.map(r => `
+    <div class="reg-item ${r.checked ? 'checked' : ''}">
+      <div class="reg-dot" style="background:${r.checked ? 'var(--green)' : 'var(--text2)'}"></div>
+      <div class="reg-name ${r.checked ? 'done' : ''}">${r.name}</div>
+      <span class="reg-meetings">×${r.meetings}</span>
+      <span class="reg-phone">${last3(r.phone)}</span>
+    </div>
+  `).join('');
+
+  const pct = total ? (checked / total) * 100 : 0;
+  $('progress-fill').style.width = pct + '%';
+}
+</script>
+</body>
+</html>

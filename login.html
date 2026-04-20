@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>登入活動報到系統</title>
+  <link rel="stylesheet" href="./assets/style.css" />
+  <script type="module" src="./assets/login.js"></script>
+</head>
+<body>
+  <header class="site-header">
+    <div>
+      <h1>登入活動報到系統</h1>
+      <p>使用 Firebase Authentication 的 Email / Password 登入。</p>
+    </div>
+  </header>
+
+  <main class="container container-narrow">
+    <section class="card stack-md">
+      <h2>工作人員登入</h2>
+      <form id="login-form" class="stack-md">
+        <div>
+          <label for="email">Email</label>
+          <input id="email" name="email" type="email" autocomplete="username" required />
+        </div>
+        <div>
+          <label for="password">密碼</label>
+          <input id="password" name="password" type="password" autocomplete="current-password" required />
+        </div>
+        <button type="submit">登入</button>
+      </form>
+      <p id="login-message" class="message"></p>
+      <ul class="plain-list">
+        <li>請先到 Firebase Console 啟用 <strong>Email/Password</strong> 登入方式。</li>
+        <li>建議先建立一組共用工作人員帳號，例如櫃台專用帳號。</li>
+      </ul>
+    </section>
+  </main>
+</body>
+</html>

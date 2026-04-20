@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>管理總覽</title>
+  <link rel="stylesheet" href="./assets/style.css" />
+  <script type="module" src="./assets/admin.js"></script>
+</head>
+<body class="requires-auth">
+  <header class="site-header">
+    <div>
+      <h1>管理總覽</h1>
+      <p>查看報名狀況、報到狀態與實際到場人數。</p>
+    </div>
+    <nav>
+      <span class="auth-chip" data-auth-email>驗證中...</span>
+      <a href="./index.html">回報到頁</a>
+      <a href="./import.html">Excel 匯入</a>
+      <button type="button" class="secondary" data-logout>登出</button>
+    </nav>
+  </header>
+
+  <main class="container">
+    <section class="card stack-md">
+      <div class="section-header">
+        <h2>統計資訊</h2>
+        <button id="reload-button" class="secondary">重新整理</button>
+      </div>
+      <div class="stats-grid">
+        <div class="stat-box"><span>總筆數</span><strong id="stat-total">0</strong></div>
+        <div class="stat-box"><span>未報到</span><strong id="stat-pending">0</strong></div>
+        <div class="stat-box"><span>已報到</span><strong id="stat-checked-in">0</strong></div>
+        <div class="stat-box"><span>實到總人數</span><strong id="stat-attendance">0</strong></div>
+      </div>
+      <p id="admin-message" class="message"></p>
+    </section>
+
+    <section class="card stack-md">
+      <h2>名單列表</h2>
+      <div class="table-scroll">
+        <table>
+          <thead>
+            <tr>
+              <th>姓名</th>
+              <th>手機</th>
+              <th>報名人數</th>
+              <th>報到人數</th>
+              <th>狀態</th>
+              <th>工作人員</th>
+              <th>報到時間</th>
+              <th>備註</th>
+            </tr>
+          </thead>
+          <tbody id="admin-table-body"></tbody>
+        </table>
+      </div>
+    </section>
+  </main>
+</body>
+</html>

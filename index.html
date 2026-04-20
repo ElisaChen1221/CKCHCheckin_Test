@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>活動報到系統</title>
+  <link rel="stylesheet" href="./assets/style.css" />
+  <script type="module" src="./assets/app.js"></script>
+</head>
+<body class="requires-auth">
+  <header class="site-header">
+    <div>
+      <h1>活動報到系統</h1>
+      <p>輸入手機號碼最後三碼，快速查詢並完成報到。</p>
+    </div>
+    <nav>
+      <span class="auth-chip" data-auth-email>驗證中...</span>
+      <a href="./import.html">Excel 匯入</a>
+      <a href="./admin.html">管理總覽</a>
+      <button type="button" class="secondary" data-logout>登出</button>
+    </nav>
+  </header>
+
+  <main class="container">
+    <section class="card">
+      <h2>查詢報名資料</h2>
+      <form id="search-form" class="stack-md">
+        <label for="phone-last3">手機號碼最後三碼</label>
+        <div class="inline-form">
+          <input id="phone-last3" name="phone-last3" type="text" maxlength="3" inputmode="numeric" pattern="\d{3}" placeholder="例如 123" required />
+          <button type="submit">確認</button>
+        </div>
+      </form>
+      <p id="search-message" class="message"></p>
+    </section>
+
+    <section id="result-section" class="card hidden">
+      <div class="section-header">
+        <h2>查詢結果</h2>
+        <button id="reset-button" class="secondary">重新查詢</button>
+      </div>
+
+      <div id="multiple-results" class="hidden stack-md">
+        <p>找到多筆資料，請選擇正確的報名者：</p>
+        <div id="multiple-list" class="stack-sm"></div>
+      </div>
+
+      <div id="single-result" class="hidden"></div>
+    </section>
+
+    <section id="checkin-section" class="card hidden">
+      <h2>確認報到</h2>
+      <div id="selected-summary" class="record-card"></div>
+      <form id="checkin-form" class="stack-md">
+        <div>
+          <label for="checked-in-count">報到總人數</label>
+          <input id="checked-in-count" type="number" min="1" step="1" required />
+        </div>
+        <div>
+          <label for="checked-in-by">工作人員</label>
+          <input id="checked-in-by" type="text" maxlength="50" placeholder="例如 櫃台 A" />
+        </div>
+        <button type="submit">確認報到</button>
+      </form>
+      <p id="checkin-message" class="message"></p>
+    </section>
+  </main>
+</body>
+</html>

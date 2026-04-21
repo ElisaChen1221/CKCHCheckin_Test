@@ -177,7 +177,8 @@ button.secondary:hover, .button-like.secondary:hover {
 
 .stats-grid {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: 220px 220px;
+  justify-content: center;
   gap: 1rem;
 }
 .stat-box {
@@ -185,6 +186,11 @@ button.secondary:hover, .button-like.secondary:hover {
   border-radius: 16px;
   padding: 1rem;
   background: #f8fafc;
+  width: 220px;
+  height: 140px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
 }
 .stat-box span { display: block; color: var(--muted); }
 .stat-box strong { font-size: 2.2rem; }

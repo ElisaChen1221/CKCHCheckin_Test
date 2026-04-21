@@ -31,28 +31,50 @@ function resetView() {
   setMessage(checkinMessage, "");
 }
 
+function getStatusClass(record) {
+  return record.status === "已報到" ? "checked" : "pending";
+}
+
 function showSingle(record) {
+  const statusClass = getStatusClass(record);
+
   resultSection.classList.remove("hidden");
   singleResult.classList.remove("hidden");
-  singleResult.innerHTML = `<div class="record-card stack-sm">${recordTemplate(record)}<button id="single-checkin-button">報到</button></div>`;
-  document.querySelector("#single-checkin-button").addEventListener("click", () => selectRecord(record));
+
+  singleResult.innerHTML = `
+    <div class="record-card stack-sm ${statusClass}">
+      ${recordTemplate(record)}
+      <button id="single-checkin-button">報到</button>
+    </div>
+  `;
+
+  document
+    .querySelector("#single-checkin-button")
+    .addEventListener("click", () => selectRecord(record));
 }
 
 function showMultiple(records) {
   resultSection.classList.remove("hidden");
   multipleResults.classList.remove("hidden");
-  multipleList.innerHTML = records.map((record) => `
-    <div class="result-option">
-      <div>
-        <div><strong>${escapeHtml(record.name)}</strong></div>
-        <div class="meta">手機：${escapeHtml(record.phone || "")}</div>
-        <div class="meta">報名人數：${escapeHtml(record.registeredCount ?? "")}</div>
-        <div class="meta">狀態：${escapeHtml(record.status || "未報到")}</div>
-        <div class="meta">備註：${escapeHtml(record.note || "-")}</div>
-      </div>
-      <button data-id="${escapeHtml(record.id)}">選擇並報到</button>
-    </div>
-  `).join("");
+
+  multipleList.innerHTML = records
+    .map((record) => {
+      const statusClass = getStatusClass(record);
+
+      return `
+        <div class="result-option ${statusClass}">
+          <div>
+            <div><strong>${escapeHtml(record.name)}</strong></div>
+            <div class="meta">手機：${escapeHtml(record.phone || "")}</div>
+            <div class="meta">報名人數：${escapeHtml(record.registeredCount ?? "")}</div>
+            <div class="meta">狀態：${escapeHtml(record.status || "未報到")}</div>
+            <div class="meta">備註：${escapeHtml(record.note || "-")}</div>
+          </div>
+          <button data-id="${escapeHtml(record.id)}">選擇並報到</button>
+        </div>
+      `;
+    })
+    .join("");
 
   multipleList.querySelectorAll("button[data-id]").forEach((button) => {
     button.addEventListener("click", () => {
@@ -67,6 +89,7 @@ function selectRecord(record) {
   checkinSection.classList.remove("hidden");
   selectedSummary.innerHTML = recordTemplate(record);
   checkedInCountInput.value = record.registeredCount || 1;
+
   checkinSection.scrollIntoView({ behavior: "smooth", block: "start" });
 }
 
@@ -81,6 +104,7 @@ searchForm.addEventListener("submit", async (event) => {
   resetView();
 
   const last3 = searchForm["phone-last3"].value.trim();
+
   if (!/^\d{3}$/.test(last3)) {
     setMessage(searchMessage, "請輸入 3 位數字。", "error");
     return;
@@ -90,12 +114,14 @@ searchForm.addEventListener("submit", async (event) => {
 
   try {
     const matches = await searchByPhoneLast3(last3);
+
     if (matches.length === 0) {
       setMessage(searchMessage, "無符合資料", "error");
       return;
     }
 
     setMessage(searchMessage, `共找到 ${matches.length} 筆資料。`, "success");
+
     if (matches.length === 1) {
       showSingle(matches[0]);
     } else {
@@ -109,14 +135,18 @@ searchForm.addEventListener("submit", async (event) => {
 
 checkinForm.addEventListener("submit", async (event) => {
   event.preventDefault();
+
   if (!selectedRecord) {
     setMessage(checkinMessage, "請先選擇一筆資料。", "error");
     return;
   }
 
   const checkedInCount = Number(checkedInCountInput.value);
+
   const user = getCurrentUser();
-  const checkedInBy = user?.email ? user.email.split("@")[0] : "未知";
+  const checkedInBy = user?.email
+    ? user.email.split("@")[0]
+    : "未知";
 
   if (!Number.isInteger(checkedInCount) || checkedInCount <= 0) {
     setMessage(checkinMessage, "報到總人數必須為正整數。", "error");
@@ -125,7 +155,9 @@ checkinForm.addEventListener("submit", async (event) => {
 
   try {
     await markCheckin(selectedRecord.id, checkedInCount, checkedInBy);
+
     setMessage(checkinMessage, "報到完成，系統即將回到查詢畫面。", "success");
+
     setTimeout(() => {
       searchForm.reset();
       resetView();

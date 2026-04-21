@@ -21,6 +21,7 @@ body {
   background: var(--bg);
   color: var(--text);
   font-size: 1.05rem;
+  overflow-x: hidden;
 }
 
 body.requires-auth {
@@ -41,6 +42,10 @@ a:hover { text-decoration: underline; }
   padding: 1.25rem 1.5rem;
   background: #0f172a;
   color: white;
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+  overflow: hidden;
 }
 .site-header h1 { margin: 0 0 0.25rem; font-size: 1.75rem; }
 .site-header p { margin: 0; color: #cbd5e1; }
@@ -63,6 +68,7 @@ a:hover { text-decoration: underline; }
   padding: 1.5rem;
   display: grid;
   gap: 1rem;
+  box-sizing: border-box;
 }
 
 .container-narrow {
@@ -75,6 +81,10 @@ a:hover { text-decoration: underline; }
   border-radius: 18px;
   padding: 1.25rem;
   box-shadow: 0 12px 24px rgba(15, 23, 42, 0.06);
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+  overflow: hidden;
 }
 
 .section-header {
@@ -180,17 +190,21 @@ button.secondary:hover, .button-like.secondary:hover {
   grid-template-columns: 220px 220px;
   justify-content: center;
   gap: 1rem;
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
 }
 .stat-box {
   border: 1px solid var(--border);
   border-radius: 16px;
   padding: 1rem;
   background: #f8fafc;
-  width: 220px;
-  height: 140px;
   display: flex;
   flex-direction: column;
   justify-content: center;
+  width: 100%;
+  min-height: 140px;
+  box-sizing: border-box;
 }
 .stat-box span { display: block; color: var(--muted); }
 .stat-box strong { font-size: 2.2rem; }
@@ -234,5 +248,27 @@ code {
   .container { padding: 1rem; }
   .stats-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+@media (max-width: 900px) {
+  .site-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .site-header nav {
+    width: 100%;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+  }
+
+  .stats-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 560px) {
+  .stats-grid {
+    grid-template-columns: 1fr;
   }
 }

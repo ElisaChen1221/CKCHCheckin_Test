@@ -1,6 +1,7 @@
 import { guardPage } from "./auth.js";
 import { markCheckin, searchByPhoneLast3 } from "./firebase.js";
 import { escapeHtml, recordTemplate, setMessage } from "./utils.js";
+import { getCurrentUser } from "./firebase.js";
 
 const searchForm = document.querySelector("#search-form");
 const searchMessage = document.querySelector("#search-message");
@@ -69,6 +70,9 @@ function selectRecord(record) {
   checkinSection.classList.remove("hidden");
   selectedSummary.innerHTML = recordTemplate(record);
   checkedInCountInput.value = record.registeredCount || 1;
+  const user = getCurrentUser();
+  const name = user?.email ? user.email.split("@")[0] : "";
+  checkedInByInput.value = name;
   checkinSection.scrollIntoView({ behavior: "smooth", block: "start" });
 }
 
@@ -118,6 +122,9 @@ checkinForm.addEventListener("submit", async (event) => {
 
   const checkedInCount = Number(checkedInCountInput.value);
   const user = getCurrentUser();
+  const checkedInBy = user?.email
+  ? user.email.split("@")[0]
+  : "未知";
 
   if (!Number.isInteger(checkedInCount) || checkedInCount <= 0) {
     setMessage(checkinMessage, "報到總人數必須為正整數。", "error");

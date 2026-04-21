@@ -21,8 +21,8 @@ import {
 import { firebaseConfig } from "./firebase-config.js";
 
 const app = initializeApp(firebaseConfig);
-const db = getDatabase(app);
-const auth = getAuth(app);
+export const db = getDatabase(app);
+export const auth = getAuth(app);
 const registrationsRef = ref(db, "registrations");
 
 setPersistence(auth, browserLocalPersistence).catch((error) => {

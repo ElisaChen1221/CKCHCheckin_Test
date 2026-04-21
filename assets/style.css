@@ -212,18 +212,19 @@ button.secondary:hover, .button-like.secondary:hover {
 .table-scroll { overflow-x: auto; }
 
 table {
-  width: 100%;
+  width: auto;
   border-collapse: collapse;
   table-layout: auto;
 }
+
 th, td {
   text-align: left;
   padding: 1rem;
   font-size: 1rem;
   border-bottom: 1px solid var(--border);
   vertical-align: top;
-  word-break: break-word;   /* ✅ 中文自動換行 */
-  white-space: normal; 
+  word-break: normal; 
+  white-space: nowrap; 
 }
 
 .table-scroll {

@@ -127,7 +127,7 @@ input[type="password"] {
 
 .record-card.checked,
 .result-option.checked {
-  background: #dcfce7;
+  background: #edede9;
 }
 
 .record-card.pending,

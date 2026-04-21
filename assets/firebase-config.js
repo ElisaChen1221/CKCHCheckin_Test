@@ -1,4 +1,4 @@
-const firebaseConfig = {
+export const firebaseConfig = {
   apiKey: "AIzaSyDKLf-F9hfMf2Vrc22McKd8wirNHmB6Pcg",
   authDomain: "ckchparkcheckin.firebaseapp.com",
   databaseURL: "https://ckchparkcheckin-default-rtdb.asia-southeast1.firebasedatabase.app",

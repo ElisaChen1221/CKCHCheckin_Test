@@ -114,6 +114,11 @@ searchForm.addEventListener("submit", async (event) => {
 
   try {
     const matches = await searchByPhoneLast3(last3);
+    matches.sort((a, b) => {
+      const aDone = a.status === "已報到";
+      const bDone = b.status === "已報到";
+      return aDone - bDone;
+     });
 
     if (matches.length === 0) {
       setMessage(searchMessage, "無符合資料", "error");

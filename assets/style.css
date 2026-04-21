@@ -125,6 +125,16 @@ input[type="password"] {
   min-width: 180px;
 }
 
+.record-card.checked,
+.result-option.checked {
+  background: #dcfce7;
+}
+
+.record-card.pending,
+.result-option.pending {
+  background: #fef9c3;
+}
+
 button, .button-like {
   display: inline-flex;
   align-items: center;

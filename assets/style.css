@@ -226,4 +226,7 @@ code {
     align-items: flex-start;
   }
   .container { padding: 1rem; }
+  .stats-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
 }

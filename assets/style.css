@@ -1,3 +1,7 @@
+html {
+  font-size: 20px; 
+}
+
 :root {
   --bg: #f5f7fb;
   --card: #ffffff;
@@ -16,6 +20,7 @@ body {
   font-family: "Noto Sans TC", "PingFang TC", sans-serif;
   background: var(--bg);
   color: var(--text);
+  font-size: 1.05rem;
 }
 
 body.requires-auth {
@@ -116,7 +121,8 @@ button, .button-like {
   justify-content: center;
   border: none;
   border-radius: 12px;
-  padding: 0.85rem 1.1rem;
+  padding: 0.85rem 1.3rem;
+  font-size: 1.05rem;
   background: var(--primary);
   color: white;
   font-weight: 700;
@@ -181,7 +187,7 @@ button.secondary:hover, .button-like.secondary:hover {
   background: #f8fafc;
 }
 .stat-box span { display: block; color: var(--muted); }
-.stat-box strong { font-size: 1.75rem; }
+.stat-box strong { font-size: 2.2rem; }
 
 .table-scroll { overflow-x: auto; }
 table {
@@ -190,7 +196,8 @@ table {
 }
 th, td {
   text-align: left;
-  padding: 0.8rem;
+  padding: 1rem;
+  font-size: 1rem;
   border-bottom: 1px solid var(--border);
   vertical-align: top;
 }

@@ -214,7 +214,7 @@ button.secondary:hover, .button-like.secondary:hover {
 table {
   width: 100%;
   border-collapse: collapse;
-  table-layout: fixed;
+  table-layout: auto;
 }
 th, td {
   text-align: left;
@@ -222,18 +222,9 @@ th, td {
   font-size: 1rem;
   border-bottom: 1px solid var(--border);
   vertical-align: top;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  word-break: break-word;   /* ✅ 中文自動換行 */
+  white-space: normal; 
 }
-
-th:nth-child(1), td:nth-child(1) { width: 100px; }
-th:nth-child(2), td:nth-child(2) { width: 140px; }
-th:nth-child(3), td:nth-child(3) { width: 100px; }
-th:nth-child(4), td:nth-child(4) { width: 100px; }
-th:nth-child(5), td:nth-child(5) { width: 100px; }
-th:nth-child(6), td:nth-child(6) { width: 120px; }
-th:nth-child(7), td:nth-child(7) { width: 180px; }
-th:nth-child(8), td:nth-child(8) { width: 200px; }
 
 .table-scroll {
   overflow-x: auto;

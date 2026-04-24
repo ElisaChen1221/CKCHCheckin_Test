@@ -18,6 +18,23 @@ function formatDate(value) {
   return date.toLocaleString("zh-TW", { hour12: false });
 }
 
+function formatTimeOnly(value) {
+  if (!value) return "-";
+
+  const date = new Date(value);
+
+  if (Number.isNaN(date.getTime())) {
+    return value;
+  }
+
+  return date.toLocaleTimeString("zh-TW", {
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+    hour12: false
+  });
+}
+
 function renderStats(records) {
   statTotal.textContent = records.length;
   statPending.textContent = records.filter((r) => r.status !== "已報到").length;
@@ -41,7 +58,7 @@ function renderTable(records) {
         <td>${escapeHtml(record.checkedInCount ?? "-")}</td>
         <td>${formatStatusBadge(record.status)}</td>
         <td>${escapeHtml(record.checkedInBy || "-")}</td>
-        <td>${escapeHtml(formatDate(record.checkinTime))}</td>
+        <td>${escapeHtml(formatTimeOnly(record.checkinTime))}</td>
         <td>${escapeHtml(record.note || "-")}</td>
       </tr>
     `)

@@ -35,6 +35,35 @@ function getStatusClass(record) {
   return record.status === "已報到" ? "checked" : "pending";
 }
 
+function formatCheckinTime(record) {
+  if (record.status !== "已報到" || !record.checkinTime) return "";
+
+  const date = new Date(record.checkinTime);
+  const timeText = Number.isNaN(date.getTime())
+    ? record.checkinTime
+    : date.toLocaleString("zh-TW", {
+        hour: "2-digit",
+        minute: "2-digit",
+        second: "2-digit",
+        hour12: false
+      });
+
+  return `<div class="meta">報到時間：${escapeHtml(timeText)}</div>`;
+}
+
+function sortRecords(records) {
+  return records.sort((a, b) => {
+    const aDone = a.status === "已報到";
+    const bDone = b.status === "已報到";
+
+    if (aDone !== bDone) {
+      return Number(aDone) - Number(bDone);
+    }
+
+    return String(a.name || "").localeCompare(String(b.name || ""), "zh-Hant");
+  });
+}
+
 function showSingle(record) {
   const statusClass = getStatusClass(record);
 
@@ -44,6 +73,7 @@ function showSingle(record) {
   singleResult.innerHTML = `
     <div class="record-card stack-sm ${statusClass}">
       ${recordTemplate(record)}
+      ${formatCheckinTime(record)}
       <button id="single-checkin-button">報到</button>
     </div>
   `;
@@ -68,6 +98,7 @@ function showMultiple(records) {
             <div class="meta">手機：${escapeHtml(record.phone || "")}</div>
             <div class="meta">報名人數：${escapeHtml(record.registeredCount ?? "")}</div>
             <div class="meta">狀態：${escapeHtml(record.status || "未報到")}</div>
+            ${formatCheckinTime(record)}
             <div class="meta">備註：${escapeHtml(record.note || "-")}</div>
           </div>
           <button data-id="${escapeHtml(record.id)}">選擇並報到</button>
@@ -87,7 +118,10 @@ function showMultiple(records) {
 function selectRecord(record) {
   selectedRecord = record;
   checkinSection.classList.remove("hidden");
-  selectedSummary.innerHTML = recordTemplate(record);
+  selectedSummary.innerHTML = `
+    ${recordTemplate(record)}
+    ${formatCheckinTime(record)}
+  `;
   checkedInCountInput.value = record.registeredCount || 1;
 
   checkinSection.scrollIntoView({ behavior: "smooth", block: "start" });
@@ -113,12 +147,7 @@ searchForm.addEventListener("submit", async (event) => {
   setMessage(searchMessage, "查詢中...");
 
   try {
-    const matches = await searchByPhoneLast3(last3);
-    matches.sort((a, b) => {
-      const aDone = a.status === "已報到";
-      const bDone = b.status === "已報到";
-      return aDone - bDone;
-     });
+    const matches = sortRecords(await searchByPhoneLast3(last3));
 
     if (matches.length === 0) {
       setMessage(searchMessage, "無符合資料", "error");
@@ -147,11 +176,8 @@ checkinForm.addEventListener("submit", async (event) => {
   }
 
   const checkedInCount = Number(checkedInCountInput.value);
-
   const user = getCurrentUser();
-  const checkedInBy = user?.email
-    ? user.email.split("@")[0]
-    : "未知";
+  const checkedInBy = user?.email ? user.email.split("@")[0] : "未知";
 
   if (!Number.isInteger(checkedInCount) || checkedInCount <= 0) {
     setMessage(checkinMessage, "報到總人數必須為正整數。", "error");
